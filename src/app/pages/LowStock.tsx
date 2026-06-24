@@ -1,7 +1,7 @@
 import { useAppContext } from '../store/AppContext';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Download, FileText, Printer } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 import { Link } from 'react-router';
 
 export function LowStock() {

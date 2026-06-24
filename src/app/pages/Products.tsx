@@ -6,7 +6,7 @@ import { Input, Select } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
 import { z } from 'zod';
-import { useForm as useReactHookForm, Controller } from 'react-hook-form';
+import { useForm as useReactHookForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 
@@ -34,8 +34,8 @@ export function Products() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  const { register, handleSubmit, formState: { errors }, reset, setValue, control } = useReactHookForm<ProductFormData>({
-    resolver: zodResolver(productSchema),
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useReactHookForm<ProductFormData>({
+    resolver: zodResolver(productSchema) as any,
     defaultValues: { status: 'Active', costPrice: 0, sellingPrice: 0, reorderLevel: 10 }
   });
 
@@ -199,7 +199,7 @@ export function Products() {
         title={editingProduct ? 'Edit Product' : 'Add New Product'}
         className="max-w-3xl"
       >
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input label="Product Code" {...register('productCode')} error={errors.productCode?.message} />
             <Input label="Barcode" {...register('barcode')} error={errors.barcode?.message} />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+
 import { useAppContext } from '../store/AppContext';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -21,7 +21,7 @@ export function StockOut() {
   const { products, addStockMovement } = useAppContext();
   
   const { register, handleSubmit, formState: { errors }, reset, watch, setError } = useForm<StockOutFormData>({
-    resolver: zodResolver(stockOutSchema),
+    resolver: zodResolver(stockOutSchema) as any,
     defaultValues: { date: new Date().toISOString().split('T')[0], reason: 'Sale' }
   });
 
@@ -55,7 +55,7 @@ export function StockOut() {
       <Card>
         <CardHeader title="Deduct Stock" />
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Select
                 label="Product"

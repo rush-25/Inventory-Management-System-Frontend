@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useAppContext, Category } from '../store/AppContext';
-import { Card, CardContent, CardHeader } from '../components/ui/Card';
+import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Select } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
-import { useForm } from 'react-form';
+
 import { z } from 'zod';
 import { useForm as useReactHookForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';

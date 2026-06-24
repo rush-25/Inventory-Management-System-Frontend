@@ -1,5 +1,5 @@
 import { Card, CardContent } from '../components/ui/Card';
-import { FileBarChart, ArrowDownToLine, ArrowUpFromLine, Layers, Users, AlertTriangle } from 'lucide-react';
+import { FileBarChart, ArrowDownToLine, Layers, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 
 export function Reports() {
