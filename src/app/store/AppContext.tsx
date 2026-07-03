@@ -1,12 +1,37 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+/**
+ * AppContext – real API-backed context using React Query.
+ *
+ * All pages that previously imported from './store/AppContext' continue to
+ * work because we re-export the same hook names and type names, but now
+ * they are backed by the live backend.
+ */
+import {
+  createContext,
+  useContext,
+  ReactNode,
+  useCallback,
+} from 'react';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
+
+
+import { categoryService, CategoryDto } from '../services/categoryService';
+import { supplierService, SupplierDto } from '../services/supplierService';
+import { itemService, ItemDto } from '../services/itemService';
+import { stockService, StockBalanceDto } from '../services/stockService';
+
+// ─── Exported types (shape kept compatible with the old mock types) ────────────
 
 export type Category = {
-  id: string;
+  id: string;        // string representation of CategoryId
   name: string;
   description: string;
   status: 'Active' | 'Inactive';
   createdAt: string;
+  _raw: CategoryDto; // original backend DTO for mutation calls
 };
 
 export type Supplier = {
@@ -17,6 +42,7 @@ export type Supplier = {
   address: string;
   status: 'Active' | 'Inactive';
   createdAt: string;
+  _raw: SupplierDto;
 };
 
 export type Product = {
@@ -26,7 +52,9 @@ export type Product = {
   name: string;
   brand: string;
   categoryId: string;
+  categoryName: string;
   supplierId: string;
+  supplierName: string;
   costPrice: number;
   sellingPrice: number;
   stockQuantity: number;
@@ -34,132 +62,279 @@ export type Product = {
   imageUrl: string;
   status: 'Active' | 'Inactive';
   createdAt: string;
+  _raw: ItemDto;
 };
 
-export type StockMovement = {
-  id: string;
-  type: 'IN' | 'OUT';
-  productId: string;
-  quantity: number;
-  date: string;
-  reason?: string;
-  remarks?: string;
-  supplierId?: string;
-  costPrice?: number;
-};
+export type StockBalance = StockBalanceDto;
 
-interface AppState {
+// ─── Context type ─────────────────────────────────────────────────────────────
+
+interface AppContextType {
+  // Data
   categories: Category[];
   suppliers: Supplier[];
   products: Product[];
-  stockMovements: StockMovement[];
+  stockBalances: StockBalance[];
+  // Loading states
+  categoriesLoading: boolean;
+  suppliersLoading: boolean;
+  productsLoading: boolean;
+  stockLoading: boolean;
+  // Category mutations
+  addCategory: (data: { name: string; description: string; status: 'Active' | 'Inactive' }) => Promise<void>;
+  updateCategory: (id: string, data: { name: string; description: string; status: 'Active' | 'Inactive' }) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  // Supplier mutations
+  addSupplier: (data: { name: string; contactNumber: string; email: string; address: string; status: 'Active' | 'Inactive' }) => Promise<void>;
+  updateSupplier: (id: string, data: { name: string; contactNumber: string; email: string; address: string; status: 'Active' | 'Inactive' }) => Promise<void>;
+  deleteSupplier: (id: string) => Promise<void>;
+  // Product mutations
+  addProduct: (data: Omit<Product, 'id' | 'createdAt' | 'stockQuantity' | 'categoryName' | 'supplierName' | '_raw'>) => Promise<void>;
+  updateProduct: (id: string, data: Omit<Product, 'id' | 'createdAt' | 'stockQuantity' | 'categoryName' | 'supplierName' | '_raw'>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  // Stock mutations
+  addStockIn: (data: { productId: string; supplierId: string; quantity: number; costPrice: number; date: string }) => Promise<void>;
+  addStockOut: (data: { productId: string; quantity: number; reason: string; date: string }) => Promise<void>;
+  // Refresh helpers
+  refreshStock: () => void;
 }
 
-interface AppContextType extends AppState {
-  addCategory: (category: Omit<Category, 'id' | 'createdAt'>) => void;
-  updateCategory: (id: string, category: Partial<Category>) => void;
-  deleteCategory: (id: string) => void;
-  
-  addSupplier: (supplier: Omit<Supplier, 'id' | 'createdAt'>) => void;
-  updateSupplier: (id: string, supplier: Partial<Supplier>) => void;
-  deleteSupplier: (id: string) => void;
-  
-  addProduct: (product: Omit<Product, 'id' | 'createdAt'>) => void;
-  updateProduct: (id: string, product: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  
-  addStockMovement: (movement: Omit<StockMovement, 'id'>) => void;
-}
+// ─── Mappers ──────────────────────────────────────────────────────────────────
 
-const initialCategories: Category[] = [
-  { id: 'c1', name: 'Smartphones', description: 'All mobile phones', status: 'Active', createdAt: '2023-01-15' },
-  { id: 'c2', name: 'Tablets', description: 'iPads and Android tablets', status: 'Active', createdAt: '2023-01-16' },
-  { id: 'c3', name: 'Smart Watches', description: 'Apple Watch, Galaxy Watch etc', status: 'Active', createdAt: '2023-01-17' },
-  { id: 'c4', name: 'Chargers', description: 'Wall chargers and cables', status: 'Active', createdAt: '2023-01-18' },
-  { id: 'c5', name: 'Earphones', description: 'Wired and wireless earphones', status: 'Active', createdAt: '2023-01-19' },
-  { id: 'c6', name: 'Phone Cases', description: 'Protective cases', status: 'Active', createdAt: '2023-01-20' },
-  { id: 'c7', name: 'Power Banks', description: 'Portable chargers', status: 'Active', createdAt: '2023-01-21' },
-  { id: 'c8', name: 'Accessories', description: 'Other accessories', status: 'Active', createdAt: '2023-01-22' },
-];
+const mapCategory = (dto: CategoryDto): Category => ({
+  id: String(dto.categoryId),
+  name: dto.categoryName,
+  description: dto.description ?? '',
+  status: dto.isActive ? 'Active' : 'Inactive',
+  createdAt: dto.createdDate,
+  _raw: dto,
+});
 
-const initialSuppliers: Supplier[] = [
-  { id: 's1', name: 'Apple Distribution', contactNumber: '+1 800-692-7753', email: 'dist@apple.com', address: 'Cupertino, CA', status: 'Active', createdAt: '2023-01-10' },
-  { id: 's2', name: 'Samsung Electronics', contactNumber: '+1 800-726-7864', email: 'sales@samsung.com', address: 'Seoul, KR', status: 'Active', createdAt: '2023-01-11' },
-  { id: 's3', name: 'TechWholesale Co.', contactNumber: '+1 555-0192', email: 'orders@techwholesale.com', address: 'New York, NY', status: 'Active', createdAt: '2023-01-12' },
-];
+const mapSupplier = (dto: SupplierDto): Supplier => ({
+  id: String(dto.supplierId),
+  name: dto.supplierName,
+  contactNumber: dto.contactNumber ?? '',
+  email: dto.email ?? '',
+  address: dto.address ?? '',
+  status: dto.isActive ? 'Active' : 'Inactive',
+  createdAt: dto.createdDate,
+  _raw: dto,
+});
 
-const initialProducts: Product[] = [
-  { id: 'p1', productCode: 'PRD-001', barcode: '8801234567890', name: 'iPhone 15 Pro Max', brand: 'Apple', categoryId: 'c1', supplierId: 's1', costPrice: 999, sellingPrice: 1199, stockQuantity: 45, reorderLevel: 10, imageUrl: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?q=80&w=200&auto=format&fit=crop', status: 'Active', createdAt: '2023-10-01' },
-  { id: 'p2', productCode: 'PRD-002', barcode: '8801234567891', name: 'Samsung Galaxy S24 Ultra', brand: 'Samsung', categoryId: 'c1', supplierId: 's2', costPrice: 950, sellingPrice: 1299, stockQuantity: 30, reorderLevel: 8, imageUrl: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?q=80&w=200&auto=format&fit=crop', status: 'Active', createdAt: '2024-01-15' },
-  { id: 'p3', productCode: 'PRD-003', barcode: '8801234567892', name: 'AirPods Pro 2nd Gen', brand: 'Apple', categoryId: 'c5', supplierId: 's1', costPrice: 150, sellingPrice: 249, stockQuantity: 15, reorderLevel: 20, imageUrl: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?q=80&w=200&auto=format&fit=crop', status: 'Active', createdAt: '2023-11-20' },
-  { id: 'p4', productCode: 'PRD-004', barcode: '8801234567893', name: '20W USB-C Power Adapter', brand: 'Apple', categoryId: 'c4', supplierId: 's1', costPrice: 10, sellingPrice: 19, stockQuantity: 100, reorderLevel: 30, imageUrl: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?q=80&w=200&auto=format&fit=crop', status: 'Active', createdAt: '2023-05-10' },
-  { id: 'p5', productCode: 'PRD-005', barcode: '8801234567894', name: 'Galaxy Watch 6', brand: 'Samsung', categoryId: 'c3', supplierId: 's2', costPrice: 200, sellingPrice: 299, stockQuantity: 5, reorderLevel: 10, imageUrl: 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?q=80&w=200&auto=format&fit=crop', status: 'Active', createdAt: '2023-08-15' },
-];
+const mapProduct = (dto: ItemDto, balance: Map<number, StockBalanceDto>): Product => {
+  const bal = balance.get(dto.itemId);
+  return {
+    id: String(dto.itemId),
+    productCode: dto.itemCode,
+    barcode: dto.barcode ?? '',
+    name: dto.itemName,
+    brand: dto.brand ?? '',
+    categoryId: String(dto.categoryId),
+    categoryName: dto.categoryName ?? '',
+    supplierId: String(dto.supplierId),
+    supplierName: dto.supplierName ?? '',
+    costPrice: dto.costPrice,
+    sellingPrice: dto.sellingPrice,
+    stockQuantity: bal?.currentBalance ?? 0,
+    reorderLevel: dto.reorderLevel,
+    imageUrl: dto.imageUrl ?? 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&q=80',
+    status: dto.isActive ? 'Active' : 'Inactive',
+    createdAt: dto.createdDate,
+    _raw: dto,
+  };
+};
 
-const initialStockMovements: StockMovement[] = [
-  { id: 'sm1', type: 'IN', productId: 'p1', quantity: 50, date: '2023-10-01', supplierId: 's1', costPrice: 999, remarks: 'Initial Stock' },
-  { id: 'sm2', type: 'OUT', productId: 'p1', quantity: 5, date: '2023-10-05', reason: 'Sale' },
-  { id: 'sm3', type: 'IN', productId: 'p5', quantity: 10, date: '2023-08-15', supplierId: 's2', costPrice: 200, remarks: 'Initial Stock' },
-  { id: 'sm4', type: 'OUT', productId: 'p5', quantity: 5, date: '2023-08-20', reason: 'Sale' },
-];
+// ─── Context ──────────────────────────────────────────────────────────────────
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
-  const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [stockMovements, setStockMovements] = useState<StockMovement[]>(initialStockMovements);
+  const qc = useQueryClient();
 
-  const addCategory = (category: Omit<Category, 'id' | 'createdAt'>) => {
-    setCategories([...categories, { ...category, id: uuidv4(), createdAt: new Date().toISOString() }]);
-  };
-  const updateCategory = (id: string, updated: Partial<Category>) => {
-    setCategories(categories.map(c => c.id === id ? { ...c, ...updated } : c));
-  };
-  const deleteCategory = (id: string) => {
-    setCategories(categories.filter(c => c.id !== id));
-  };
+  // ── Queries ──────────────────────────────────────────────────────────────
 
-  const addSupplier = (supplier: Omit<Supplier, 'id' | 'createdAt'>) => {
-    setSuppliers([...suppliers, { ...supplier, id: uuidv4(), createdAt: new Date().toISOString() }]);
-  };
-  const updateSupplier = (id: string, updated: Partial<Supplier>) => {
-    setSuppliers(suppliers.map(s => s.id === id ? { ...s, ...updated } : s));
-  };
-  const deleteSupplier = (id: string) => {
-    setSuppliers(suppliers.filter(s => s.id !== id));
-  };
+  const { data: categoryDtos = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: categoryService.getAll,
+  });
 
-  const addProduct = (product: Omit<Product, 'id' | 'createdAt'>) => {
-    setProducts([...products, { ...product, id: uuidv4(), createdAt: new Date().toISOString() }]);
-  };
-  const updateProduct = (id: string, updated: Partial<Product>) => {
-    setProducts(products.map(p => p.id === id ? { ...p, ...updated } : p));
-  };
-  const deleteProduct = (id: string) => {
-    setProducts(products.filter(p => p.id !== id));
-  };
+  const { data: supplierDtos = [], isLoading: suppliersLoading } = useQuery({
+    queryKey: ['suppliers'],
+    queryFn: supplierService.getAll,
+  });
 
-  const addStockMovement = (movement: Omit<StockMovement, 'id'>) => {
-    setStockMovements([...stockMovements, { ...movement, id: uuidv4() }]);
-    // Update product stock quantity
-    const product = products.find(p => p.id === movement.productId);
-    if (product) {
-      const newQuantity = movement.type === 'IN' 
-        ? product.stockQuantity + movement.quantity 
-        : product.stockQuantity - movement.quantity;
-      updateProduct(product.id, { stockQuantity: newQuantity });
-    }
-  };
+  const { data: itemDtos = [], isLoading: itemsLoading } = useQuery({
+    queryKey: ['items'],
+    queryFn: itemService.getAll,
+  });
+
+  const { data: balanceDtos = [], isLoading: stockLoading } = useQuery({
+    queryKey: ['stockBalance'],
+    queryFn: stockService.getBalance,
+  });
+
+  const balanceMap = new Map<number, StockBalanceDto>(
+    balanceDtos.map((b) => [b.itemId, b])
+  );
+
+  const categories = categoryDtos.map(mapCategory);
+  const suppliers = supplierDtos.map(mapSupplier);
+  const products = itemDtos.map((item) => mapProduct(item, balanceMap));
+
+  const refreshStock = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ['stockBalance'] });
+    qc.invalidateQueries({ queryKey: ['items'] });
+  }, [qc]);
+
+  // ── Category mutations ────────────────────────────────────────────────────
+
+  const { mutateAsync: createCat } = useMutation({
+    mutationFn: categoryService.create,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+  const { mutateAsync: updateCat } = useMutation({
+    mutationFn: ({ id, dto }: { id: number; dto: any }) => categoryService.update(id, dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+  const { mutateAsync: deleteCat } = useMutation({
+    mutationFn: (id: number) => categoryService.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+  });
+
+  const addCategory = useCallback(async (data: { name: string; description: string; status: 'Active' | 'Inactive' }) => {
+    await createCat({ categoryName: data.name, description: data.description, isActive: data.status === 'Active' });
+  }, [createCat]);
+
+  const updateCategory = useCallback(async (id: string, data: { name: string; description: string; status: 'Active' | 'Inactive' }) => {
+    await updateCat({ id: Number(id), dto: { categoryName: data.name, description: data.description, isActive: data.status === 'Active' } });
+  }, [updateCat]);
+
+  const deleteCategory = useCallback(async (id: string) => {
+    await deleteCat(Number(id));
+  }, [deleteCat]);
+
+  // ── Supplier mutations ────────────────────────────────────────────────────
+
+  const { mutateAsync: createSup } = useMutation({
+    mutationFn: supplierService.create,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['suppliers'] }),
+  });
+  const { mutateAsync: updateSup } = useMutation({
+    mutationFn: ({ id, dto }: { id: number; dto: any }) => supplierService.update(id, dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['suppliers'] }),
+  });
+  const { mutateAsync: deleteSup } = useMutation({
+    mutationFn: (id: number) => supplierService.delete(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['suppliers'] }),
+  });
+
+  const addSupplier = useCallback(async (data: { name: string; contactNumber: string; email: string; address: string; status: 'Active' | 'Inactive' }) => {
+    await createSup({ supplierName: data.name, contactNumber: data.contactNumber, email: data.email, address: data.address, isActive: data.status === 'Active' });
+  }, [createSup]);
+
+  const updateSupplier = useCallback(async (id: string, data: { name: string; contactNumber: string; email: string; address: string; status: 'Active' | 'Inactive' }) => {
+    await updateSup({ id: Number(id), dto: { supplierName: data.name, contactNumber: data.contactNumber, email: data.email, address: data.address, isActive: data.status === 'Active' } });
+  }, [updateSup]);
+
+  const deleteSupplier = useCallback(async (id: string) => {
+    await deleteSup(Number(id));
+  }, [deleteSup]);
+
+  // ── Item mutations ────────────────────────────────────────────────────────
+
+  const { mutateAsync: createItem } = useMutation({
+    mutationFn: itemService.create,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['items'] }); qc.invalidateQueries({ queryKey: ['stockBalance'] }); },
+  });
+  const { mutateAsync: updateItem } = useMutation({
+    mutationFn: ({ id, dto }: { id: number; dto: any }) => itemService.update(id, dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['items'] }),
+  });
+  const { mutateAsync: deleteItem } = useMutation({
+    mutationFn: (id: number) => itemService.delete(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['items'] }); qc.invalidateQueries({ queryKey: ['stockBalance'] }); },
+  });
+
+  const addProduct = useCallback(async (data: Omit<Product, 'id' | 'createdAt' | 'stockQuantity' | 'categoryName' | 'supplierName' | '_raw'>) => {
+    await createItem({
+      itemCode: data.productCode,
+      barcode: data.barcode,
+      itemName: data.name,
+      brand: data.brand,
+      imageUrl: data.imageUrl,
+      categoryId: Number(data.categoryId),
+      supplierId: Number(data.supplierId),
+      costPrice: data.costPrice,
+      sellingPrice: data.sellingPrice,
+      reorderLevel: data.reorderLevel,
+      isActive: data.status === 'Active',
+    });
+  }, [createItem]);
+
+  const updateProduct = useCallback(async (id: string, data: Omit<Product, 'id' | 'createdAt' | 'stockQuantity' | 'categoryName' | 'supplierName' | '_raw'>) => {
+    await updateItem({
+      id: Number(id),
+      dto: {
+        itemCode: data.productCode,
+        barcode: data.barcode,
+        itemName: data.name,
+        brand: data.brand,
+        imageUrl: data.imageUrl,
+        categoryId: Number(data.categoryId),
+        supplierId: Number(data.supplierId),
+        costPrice: data.costPrice,
+        sellingPrice: data.sellingPrice,
+        reorderLevel: data.reorderLevel,
+        isActive: data.status === 'Active',
+      },
+    });
+  }, [updateItem]);
+
+  const deleteProduct = useCallback(async (id: string) => {
+    await deleteItem(Number(id));
+  }, [deleteItem]);
+
+  // ── Stock mutations ────────────────────────────────────────────────────────
+
+  const { mutateAsync: doStockIn } = useMutation({
+    mutationFn: stockService.stockIn,
+    onSuccess: refreshStock,
+  });
+  const { mutateAsync: doStockOut } = useMutation({
+    mutationFn: stockService.stockOut,
+    onSuccess: refreshStock,
+  });
+
+  const addStockIn = useCallback(async (data: { productId: string; supplierId: string; quantity: number; costPrice: number; date: string }) => {
+    await doStockIn({
+      itemId: Number(data.productId),
+      supplierId: Number(data.supplierId),
+      quantity: data.quantity,
+      costPrice: data.costPrice,
+      stockInDate: data.date,
+    });
+  }, [doStockIn]);
+
+  const addStockOut = useCallback(async (data: { productId: string; quantity: number; reason: string; date: string }) => {
+    await doStockOut({
+      itemId: Number(data.productId),
+      quantity: data.quantity,
+      reason: data.reason,
+      stockOutDate: data.date,
+    });
+  }, [doStockOut]);
 
   return (
     <AppContext.Provider value={{
-      categories, suppliers, products, stockMovements,
+      categories, suppliers, products, stockBalances: balanceDtos,
+      categoriesLoading, suppliersLoading,
+      productsLoading: itemsLoading || stockLoading,
+      stockLoading,
       addCategory, updateCategory, deleteCategory,
       addSupplier, updateSupplier, deleteSupplier,
       addProduct, updateProduct, deleteProduct,
-      addStockMovement
+      addStockIn, addStockOut,
+      refreshStock,
     }}>
       {children}
     </AppContext.Provider>
