@@ -18,7 +18,7 @@ const stockOutSchema = z.object({
 type StockOutFormData = z.infer<typeof stockOutSchema>;
 
 export function StockOut() {
-  const { products, addStockMovement } = useAppContext();
+  const { products, addStockOut } = useAppContext();
   
   const { register, handleSubmit, formState: { errors }, reset, watch, setError } = useForm<StockOutFormData>({
     resolver: zodResolver(stockOutSchema) as any,
@@ -28,21 +28,24 @@ export function StockOut() {
   const selectedProductId = watch('productId');
   const selectedProduct = products.find(p => p.id === selectedProductId);
 
-  const onSubmit = (data: StockOutFormData) => {
+  const onSubmit = async (data: StockOutFormData) => {
     if (selectedProduct && data.quantity > selectedProduct.stockQuantity) {
       setError('quantity', { message: 'Quantity exceeds available stock' });
       return;
     }
 
-    addStockMovement({
-      type: 'OUT',
-      productId: data.productId,
-      quantity: data.quantity,
-      date: data.date,
-      reason: data.reason
-    });
-    toast.success('Stock deducted successfully');
-    reset();
+    try {
+      await addStockOut({
+        productId: data.productId,
+        quantity: data.quantity,
+        reason: data.reason,
+        date: data.date,
+      });
+      toast.success('Stock deducted successfully');
+      reset();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to deduct stock');
+    }
   };
 
   return (
