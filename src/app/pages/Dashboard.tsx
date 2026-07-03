@@ -21,7 +21,7 @@ export function Dashboard() {
     { label: 'Total Products', value: products.length, icon: Package, color: 'bg-blue-100 text-blue-600', path: '/products' },
     { label: 'Categories', value: categories.length, icon: FolderTree, color: 'bg-indigo-100 text-indigo-600', path: '/categories' },
     { label: 'Suppliers', value: suppliers.length, icon: Truck, color: 'bg-purple-100 text-purple-600', path: '/suppliers' },
-    { label: 'Inventory Value', value: `$${totalValue.toLocaleString()}`, icon: DollarSign, color: 'bg-emerald-100 text-emerald-600', path: '/reports' },
+    { label: 'Inventory Value', value: `LKR ${totalValue.toLocaleString()}`, icon: DollarSign, color: 'bg-emerald-100 text-emerald-600', path: '/reports' },
     { label: 'Low Stock', value: lowStock, icon: AlertTriangle, color: 'bg-amber-100 text-amber-600', path: '/low-stock' },
     { label: 'Out of Stock', value: outOfStock, icon: AlertCircle, color: 'bg-red-100 text-red-600', path: '/low-stock' },
   ];
@@ -102,8 +102,8 @@ export function Dashboard() {
                 <LineChart id="value-trend" data={valueTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} tickFormatter={(val) => `$${val/1000}k`} />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value: number) => [`$${value}`, 'Value']} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} tickFormatter={(val) => `LKR ${val/1000}k`} />
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value: number) => [`LKR ${value}`, 'Value']} />
                   <Line type="monotone" dataKey="value" stroke="#10B981" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>

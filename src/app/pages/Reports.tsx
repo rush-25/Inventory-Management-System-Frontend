@@ -65,7 +65,7 @@ export function Reports() {
     doc.text('Summary', 14, 38);
     const summaryRows = [
       ['Total Items', String(totalItems)],
-      ['Total Inventory Value', `$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
+      ['Total Inventory Value', `LKR ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`],
       ['Good Stock Items', String(goodStockCount)],
       ['Low Stock Items', String(lowStockCount)],
       ['Out of Stock Items', String(outOfStockCount)],
@@ -145,8 +145,8 @@ export function Reports() {
           i.brand ?? '',
           i.categoryName ?? '',
           i.supplierName ?? '',
-          `$${i.costPrice}`,
-          `$${i.sellingPrice}`,
+          `LKR ${i.costPrice}`,
+          `LKR ${i.sellingPrice}`,
           b?.currentBalance ?? 0,
           i.reorderLevel,
           b?.stockStatus ?? '',
@@ -194,13 +194,13 @@ export function Reports() {
           return [
             i.itemCode,
             i.itemName,
-            `$${i.costPrice}`,
+            `LKR ${i.costPrice}`,
             b?.totalStockIn ?? 0,
-            `$${((b?.totalStockIn ?? 0) * i.costPrice).toFixed(2)}`,
+            `LKR ${((b?.totalStockIn ?? 0) * i.costPrice).toFixed(2)}`,
             b?.currentBalance ?? 0,
           ];
         }),
-        foot: [['', 'Total Procurement Cost', '', '', `$${totalCost.toFixed(2)}`, '']],
+        foot: [['', 'Total Procurement Cost', '', '', `LKR ${totalCost.toFixed(2)}`, '']],
         styles: { fontSize: 8 },
         headStyles: { fillColor: [124, 58, 237] },
         footStyles: { fontStyle: 'bold', fillColor: [243, 244, 246] },

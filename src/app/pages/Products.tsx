@@ -163,8 +163,8 @@ export function Products() {
                     <td className="px-4 py-3">{cat?.name}</td>
                     <td className="px-4 py-3">{sup?.name}</td>
                     <td className="px-4 py-3">
-                      <div className="text-slate-500">${product.costPrice}</div>
-                      <div className="font-medium text-slate-900">${product.sellingPrice}</div>
+                      <div className="text-slate-500">LKR {product.costPrice}</div>
+                      <div className="font-medium text-slate-900">LKR {product.sellingPrice}</div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`font-semibold ${product.stockQuantity <= product.reorderLevel ? (product.stockQuantity === 0 ? 'text-red-600' : 'text-amber-600') : 'text-emerald-600'}`}>
