@@ -49,21 +49,29 @@ export function Categories() {
     setIsModalOpen(true);
   };
 
-  const onSubmit = (data: CategoryFormData) => {
-    if (editingCategory) {
-      updateCategory(editingCategory.id, data);
-      toast.success('Category updated successfully');
-    } else {
-      addCategory(data);
-      toast.success('Category added successfully');
+  const onSubmit = async (data: CategoryFormData) => {
+    try {
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, data);
+        toast.success('Category updated successfully');
+      } else {
+        await addCategory(data);
+        toast.success('Category added successfully');
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to save category');
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this category?')) {
-      deleteCategory(id);
-      toast.success('Category deleted successfully');
+      try {
+        await deleteCategory(id);
+        toast.success('Category deleted successfully');
+      } catch (err: any) {
+        toast.error(err?.message ?? 'Failed to delete category');
+      }
     }
   };
 
