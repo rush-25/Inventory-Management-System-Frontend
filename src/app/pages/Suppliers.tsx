@@ -52,21 +52,29 @@ export function Suppliers() {
     setIsModalOpen(true);
   };
 
-  const onSubmit = (data: SupplierFormData) => {
-    if (editingSupplier) {
-      updateSupplier(editingSupplier.id, data);
-      toast.success('Supplier updated successfully');
-    } else {
-      addSupplier(data);
-      toast.success('Supplier added successfully');
+  const onSubmit = async (data: SupplierFormData) => {
+    try {
+      if (editingSupplier) {
+        await updateSupplier(editingSupplier.id, data);
+        toast.success('Supplier updated successfully');
+      } else {
+        await addSupplier(data);
+        toast.success('Supplier added successfully');
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to save supplier');
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this supplier?')) {
-      deleteSupplier(id);
-      toast.success('Supplier deleted successfully');
+      try {
+        await deleteSupplier(id);
+        toast.success('Supplier deleted successfully');
+      } catch (err: any) {
+        toast.error(err?.message ?? 'Failed to delete supplier');
+      }
     }
   };
 
