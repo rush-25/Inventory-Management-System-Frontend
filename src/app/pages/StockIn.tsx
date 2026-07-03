@@ -20,7 +20,7 @@ const stockInSchema = z.object({
 type StockInFormData = z.infer<typeof stockInSchema>;
 
 export function StockIn() {
-  const { suppliers, products, addStockMovement } = useAppContext();
+  const { suppliers, products, addStockIn } = useAppContext();
   
   const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<StockInFormData>({
     resolver: zodResolver(stockInSchema) as any,
@@ -36,18 +36,20 @@ export function StockIn() {
     ? products.filter(p => p.supplierId === selectedSupplierId)
     : products;
 
-  const onSubmit = (data: StockInFormData) => {
-    addStockMovement({
-      type: 'IN',
-      productId: data.productId,
-      quantity: data.quantity,
-      date: data.date,
-      supplierId: data.supplierId,
-      costPrice: data.costPrice,
-      remarks: data.remarks
-    });
-    toast.success('Stock added successfully');
-    reset();
+  const onSubmit = async (data: StockInFormData) => {
+    try {
+      await addStockIn({
+        productId: data.productId,
+        supplierId: data.supplierId,
+        quantity: data.quantity,
+        costPrice: data.costPrice,
+        date: data.date,
+      });
+      toast.success('Stock added successfully');
+      reset();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to add stock');
+    }
   };
 
   return (
