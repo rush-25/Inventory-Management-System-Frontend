@@ -71,21 +71,29 @@ export function Products() {
     setIsModalOpen(true);
   };
 
-  const onSubmit = (data: ProductFormData) => {
-    if (editingProduct) {
-      updateProduct(editingProduct.id, data);
-      toast.success('Product updated successfully');
-    } else {
-      addProduct({ ...data, stockQuantity: 0 }); // New products start with 0 stock
-      toast.success('Product added successfully');
+  const onSubmit = async (data: ProductFormData) => {
+    try {
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, data);
+        toast.success('Product updated successfully');
+      } else {
+        await addProduct(data as any);
+        toast.success('Product added successfully');
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to save product');
     }
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this product?')) {
-      deleteProduct(id);
-      toast.success('Product deleted successfully');
+      try {
+        await deleteProduct(id);
+        toast.success('Product deleted successfully');
+      } catch (err: any) {
+        toast.error(err?.message ?? 'Failed to delete product');
+      }
     }
   };
 
