@@ -11,11 +11,11 @@ import {
 import { useMemo } from 'react';
 
 export function Dashboard() {
-  const { products, categories, suppliers, stockMovements } = useAppContext();
+  const { products, categories, suppliers, stockBalances } = useAppContext();
 
   const totalValue = products.reduce((sum, p) => sum + (p.stockQuantity * p.costPrice), 0);
-  const lowStock = products.filter(p => p.stockQuantity > 0 && p.stockQuantity <= p.reorderLevel).length;
-  const outOfStock = products.filter(p => p.stockQuantity === 0).length;
+  const lowStock = stockBalances.filter(b => b.stockStatus === 'Low Stock').length;
+  const outOfStock = stockBalances.filter(b => b.stockStatus === 'Out of Stock').length;
 
   const stats = [
     { label: 'Total Products', value: products.length, icon: Package, color: 'bg-blue-100 text-blue-600', path: '/products' },
@@ -115,28 +115,28 @@ export function Dashboard() {
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader title="Recent Stock In" action={<Link to="/stock-in" className="text-sm text-blue-600 font-medium hover:underline">View All</Link>} />
+          <CardHeader title="Recent Low Stock Items" action={<Link to="/stock-in" className="text-sm text-blue-600 font-medium hover:underline">Stock In</Link>} />
           <CardContent className="p-0">
             <div className="divide-y divide-slate-100">
-              {stockMovements.filter(m => m.type === 'IN').slice(0, 5).map(movement => {
-                const product = products.find(p => p.id === movement.productId);
-                return (
-                  <div key={movement.id} className="p-4 flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                        <ArrowDownToLine size={20} />
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{product?.name || 'Unknown Product'}</p>
-                        <p className="text-sm text-slate-500">{new Date(movement.date).toLocaleDateString()}</p>
-                      </div>
+              {products.filter(p => p.stockQuantity <= p.reorderLevel).slice(0, 5).map(product => (
+                <div key={product.id} className="p-4 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                      <ArrowDownToLine size={20} />
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-emerald-600">+{movement.quantity}</p>
+                    <div>
+                      <p className="font-medium text-slate-900">{product.name}</p>
+                      <p className="text-sm text-slate-500">{product.productCode}</p>
                     </div>
                   </div>
-                )
-              })}
+                  <div className="text-right">
+                    <p className="font-semibold text-amber-600">{product.stockQuantity} left</p>
+                  </div>
+                </div>
+              ))}
+              {products.filter(p => p.stockQuantity <= p.reorderLevel).length === 0 && (
+                <p className="p-4 text-sm text-slate-400">All products well stocked.</p>
+              )}
             </div>
           </CardContent>
         </Card>
