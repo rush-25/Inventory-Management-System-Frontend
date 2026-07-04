@@ -1,18 +1,26 @@
 import { useAppContext } from '../store/AppContext';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
-import { 
-  Package, FolderTree, Truck, DollarSign, AlertCircle, AlertTriangle, ArrowDownToLine
+import {
+  Package, FolderTree, Truck, DollarSign, AlertCircle, AlertTriangle
 } from 'lucide-react';
 import { Link } from 'react-router';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line
-} from 'recharts';
-import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { stockService } from '../services/stockService';
+
+// ─── date formatter ───────────────────────────────────────────────────────────
+
+function fmt(dateStr: string): string {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export function Dashboard() {
   const { products, categories, suppliers, stockBalances } = useAppContext();
 
+  // stat card data — unchanged from original
   const totalValue = products.reduce((sum, p) => sum + (p.stockQuantity * p.costPrice), 0);
   const lowStock = stockBalances.filter(b => b.stockStatus === 'Low Stock').length;
   const outOfStock = stockBalances.filter(b => b.stockStatus === 'Out of Stock').length;
@@ -26,27 +34,28 @@ export function Dashboard() {
     { label: 'Out of Stock', value: outOfStock, icon: AlertCircle, color: 'bg-red-100 text-red-600', path: '/low-stock' },
   ];
 
-  const monthlyMovementData = useMemo(() => {
-    // Generate mock data for the chart since real data might be sparse
-    return [
-      { id: '1', name: 'Jan', in: 400, out: 240 },
-      { id: '2', name: 'Feb', in: 300, out: 139 },
-      { id: '3', name: 'Mar', in: 200, out: 980 },
-      { id: '4', name: 'Apr', in: 278, out: 390 },
-      { id: '5', name: 'May', in: 189, out: 480 },
-      { id: '6', name: 'Jun', in: 239, out: 380 },
-      { id: '7', name: 'Jul', in: 349, out: 430 },
-    ];
-  }, []);
+  // recent stock-in / stock-out histories
+  const { data: stockInHistory = [], isLoading: loadingIn } = useQuery({
+    queryKey: ['stockInHistory'],
+    queryFn: stockService.getStockInHistory,
+  });
 
-  const valueTrendData = useMemo(() => {
-    return [
-      { id: '1', name: 'Week 1', value: 24000 },
-      { id: '2', name: 'Week 2', value: 22000 },
-      { id: '3', name: 'Week 3', value: 26000 },
-      { id: '4', name: 'Week 4', value: 31000 },
-    ];
-  }, []);
+  const { data: stockOutHistory = [], isLoading: loadingOut } = useQuery({
+    queryKey: ['stockOutHistory'],
+    queryFn: stockService.getStockOutHistory,
+  });
+
+  const recentIn = [...stockInHistory]
+    .sort((a, b) => new Date(b.stockInDate).getTime() - new Date(a.stockInDate).getTime())
+    .slice(0, 5);
+
+  const recentOut = [...stockOutHistory]
+    .sort((a, b) => new Date(b.stockOutDate).getTime() - new Date(a.stockOutDate).getTime())
+    .slice(0, 5);
+
+  const lowStockItems = stockBalances
+    .filter(b => b.stockStatus === 'Low Stock' || b.stockStatus === 'Out of Stock')
+    .slice(0, 8);
 
   return (
     <div className="space-y-6">
@@ -55,7 +64,7 @@ export function Dashboard() {
         <p className="text-slate-500 mt-1">Welcome back to V2 Phone Arcade Inventory Management.</p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid — original 6 cards, untouched */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {stats.map((stat, idx) => (
           <Link key={idx} to={stat.path} className="block group">
@@ -74,100 +83,151 @@ export function Dashboard() {
         ))}
       </div>
 
-      {/* Charts Row */}
+      {/* Recent Stock In & Recent Stock Out — side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Recent Stock In */}
         <Card>
-          <CardHeader title="Monthly Stock Movement" />
-          <CardContent>
-            <div className="h-72 w-full min-h-[288px]">
-              <ResponsiveContainer width="100%" height="100%" minHeight={288}>
-                <BarChart id="monthly-movement" data={monthlyMovementData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                  <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                  <Bar dataKey="in" name="Stock In" fill="#2563EB" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="out" name="Stock Out" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+          <CardHeader
+            title="Recent Stock In"
+            action={
+              <Link to="/stock-in" className="text-sm text-blue-600 font-medium hover:underline">
+                View All
+              </Link>
+            }
+          />
+          <CardContent className="p-0">
+            {/* column headers */}
+            <div className="flex items-center px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100">
+              <span className="flex-1">Item</span>
+              <span className="w-16 text-right">Qty</span>
+              <span className="w-24 text-right">Date</span>
             </div>
+
+            {loadingIn ? (
+              <p className="p-6 text-center text-sm text-slate-400">Loading…</p>
+            ) : recentIn.length === 0 ? (
+              <p className="p-6 text-center text-sm text-slate-400">No stock-in records found.</p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {recentIn.map(item => (
+                  <div key={item.stockInId} className="flex items-center px-4 py-3 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                        <Package size={15} />
+                      </div>
+                      <span className="text-sm font-medium text-slate-800 truncate">
+                        {item.itemName ?? `Item #${item.itemId}`}
+                      </span>
+                    </div>
+                    <span className="w-16 text-center text-sm font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                      +{item.quantity}
+                    </span>
+                    <span className="w-24 text-right text-xs text-slate-400 whitespace-nowrap">
+                      {fmt(item.stockInDate)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* Recent Stock Out */}
         <Card>
-          <CardHeader title="Inventory Value Trend" />
-          <CardContent>
-            <div className="h-72 w-full min-h-[288px]">
-              <ResponsiveContainer width="100%" height="100%" minHeight={288}>
-                <LineChart id="value-trend" data={valueTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748B' }} tickFormatter={(val) => `LKR ${val/1000}k`} />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value: number) => [`LKR ${value}`, 'Value']} />
-                  <Line type="monotone" dataKey="value" stroke="#10B981" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
+          <CardHeader
+            title="Recent Stock Out"
+            action={
+              <Link to="/stock-out" className="text-sm text-blue-600 font-medium hover:underline">
+                View All
+              </Link>
+            }
+          />
+          <CardContent className="p-0">
+            {/* column headers */}
+            <div className="flex items-center px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100">
+              <span className="flex-1">Item</span>
+              <span className="w-16 text-right">Qty</span>
+              <span className="w-24 text-right">Date</span>
             </div>
+
+            {loadingOut ? (
+              <p className="p-6 text-center text-sm text-slate-400">Loading…</p>
+            ) : recentOut.length === 0 ? (
+              <p className="p-6 text-center text-sm text-slate-400">No stock-out records found.</p>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {recentOut.map(item => (
+                  <div key={item.stockOutId} className="flex items-center px-4 py-3 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                        <Package size={15} />
+                      </div>
+                      <span className="text-sm font-medium text-slate-800 truncate">
+                        {item.itemName ?? `Item #${item.itemId}`}
+                      </span>
+                    </div>
+                    <span className="w-16 text-center text-sm font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                      -{item.quantity}
+                    </span>
+                    <span className="w-24 text-right text-xs text-slate-400 whitespace-nowrap">
+                      {fmt(item.stockOutDate)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader title="Recent Low Stock Items" action={<Link to="/stock-in" className="text-sm text-blue-600 font-medium hover:underline">Stock In</Link>} />
-          <CardContent className="p-0">
-            <div className="divide-y divide-slate-100">
-              {products.filter(p => p.stockQuantity <= p.reorderLevel).slice(0, 5).map(product => (
-                <div key={product.id} className="p-4 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                      <ArrowDownToLine size={20} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{product.name}</p>
-                      <p className="text-sm text-slate-500">{product.productCode}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-amber-600">{product.stockQuantity} left</p>
-                  </div>
-                </div>
-              ))}
-              {products.filter(p => p.stockQuantity <= p.reorderLevel).length === 0 && (
-                <p className="p-4 text-sm text-slate-400">All products well stocked.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Low Stock Alerts — full width */}
+      <Card>
+        <CardHeader
+          title="Low Stock Alerts"
+          action={
+            <Link to="/low-stock" className="text-sm text-blue-600 font-medium hover:underline">
+              View All
+            </Link>
+          }
+        />
+        <CardContent className="p-0">
+          {/* column headers */}
+          <div className="flex items-center px-4 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100">
+            <span className="flex-1">Item</span>
+            <span className="w-20 text-right">Stock</span>
+            <span className="w-20 text-right">Reorder</span>
+          </div>
 
-        <Card>
-          <CardHeader title="Low Stock Alerts" action={<Link to="/low-stock" className="text-sm text-blue-600 font-medium hover:underline">View All</Link>} />
-          <CardContent className="p-0">
+          {lowStockItems.length === 0 ? (
+            <p className="p-6 text-center text-sm text-slate-400">🎉 All products are well stocked.</p>
+          ) : (
             <div className="divide-y divide-slate-100">
-              {products.filter(p => p.stockQuantity <= p.reorderLevel).slice(0, 5).map(product => (
-                <div key={product.id} className="p-4 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-600">
-                      <AlertTriangle size={20} />
+              {lowStockItems.map(item => (
+                <div key={item.itemId} className="flex items-center px-4 py-3 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-8 h-8 rounded-md bg-amber-50 flex items-center justify-center text-amber-500 shrink-0">
+                      <AlertTriangle size={15} />
                     </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{product.name}</p>
-                      <p className="text-sm text-slate-500">{product.brand}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{item.itemName}</p>
+                      {item.categoryName && (
+                        <p className="text-xs text-slate-400">{item.categoryName}</p>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className={`font-semibold ${product.stockQuantity === 0 ? 'text-red-600' : 'text-amber-600'}`}>
-                      {product.stockQuantity} Left
-                    </p>
-                    <p className="text-xs text-slate-400">Reorder: {product.reorderLevel}</p>
-                  </div>
+                  <span className={`w-20 text-right text-sm font-bold ${item.currentBalance === 0 ? 'text-red-600' : 'text-amber-500'}`}>
+                    {item.currentBalance}
+                  </span>
+                  <span className="w-20 text-right text-sm text-slate-500 font-medium">
+                    {item.reorderLevel}
+                  </span>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
