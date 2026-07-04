@@ -76,4 +76,12 @@ export const stockService = {
     const res = await apiClient.get('/api/dashboard/stats');
     return res.data?.data ?? res.data;
   },
+  getStockInHistory: async (): Promise<StockInDto[]> => {
+    const res = await apiClient.get('/api/stock/in/history');
+    return res.data?.data ?? res.data ?? [];
+  },
+  getStockOutHistory: async (): Promise<StockOutDto[]> => {
+    const res = await apiClient.get('/api/stock/out/history');
+    return res.data?.data ?? res.data ?? [];
+  },
 };
