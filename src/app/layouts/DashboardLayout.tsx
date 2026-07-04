@@ -1,10 +1,11 @@
-import { Link, Outlet, useLocation } from 'react-router';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { 
   LayoutDashboard, FolderTree, Truck, Smartphone, 
   ArrowDownToLine, ArrowUpFromLine, Scale, AlertTriangle, 
   BarChart3, Settings, Search, Bell, User, LogOut, Menu
 } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../store/AuthContext';
 
 const MENU_ITEMS = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -21,7 +22,14 @@ const MENU_ITEMS = [
 
 export function DashboardLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans overflow-hidden">
@@ -96,7 +104,12 @@ export function DashboardLayout() {
             <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
               <User className="h-5 w-5" />
             </div>
-            <button className="p-2 text-slate-400 hover:text-red-600 transition-colors hidden sm:block">
+            <button
+              id="logout-btn"
+              onClick={handleLogout}
+              title="Sign out"
+              className="p-2 text-slate-400 hover:text-red-600 transition-colors hidden sm:block"
+            >
               <LogOut className="h-5 w-5" />
             </button>
           </div>

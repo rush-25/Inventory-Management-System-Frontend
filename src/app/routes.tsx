@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { DashboardLayout } from "./layouts/DashboardLayout";
 import { Dashboard } from "./pages/Dashboard";
 import { Categories } from "./pages/Categories";
@@ -10,11 +10,25 @@ import { StockBalance } from "./pages/StockBalance";
 import { LowStock } from "./pages/LowStock";
 import { Reports } from "./pages/Reports";
 import { Settings } from "./pages/Settings";
+import { Login } from "./pages/Login";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+
+function ProtectedDashboard() {
+  return (
+    <ProtectedRoute>
+      <DashboardLayout />
+    </ProtectedRoute>
+  );
+}
 
 export const router = createBrowserRouter([
   {
+    path: "/login",
+    Component: Login,
+  },
+  {
     path: "/",
-    Component: DashboardLayout,
+    Component: ProtectedDashboard,
     children: [
       { index: true, Component: Dashboard },
       { path: "categories", Component: Categories },
@@ -27,5 +41,9 @@ export const router = createBrowserRouter([
       { path: "reports", Component: Reports },
       { path: "settings", Component: Settings },
     ],
+  },
+  {
+    path: "*",
+    element: <Navigate to="/login" replace />,
   },
 ]);
