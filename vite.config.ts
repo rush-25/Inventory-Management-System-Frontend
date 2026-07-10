@@ -34,6 +34,7 @@ export default defineConfig({
   // Fix SPA 404 on page refresh: fall back to index.html for all routes
   server: {
     historyApiFallback: true,
+    host: true,
   },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
