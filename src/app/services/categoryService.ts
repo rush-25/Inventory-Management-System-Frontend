@@ -1,53 +1,36 @@
 import apiClient from './apiClient';
 
-export interface ItemDto {
-  itemId: number;
-  itemCode: string;
-  barcode?: string;
-  itemName: string;
-  brand?: string;
-  imageUrl?: string;
+// Backend DTO shapes
+export interface CategoryDto {
   categoryId: number;
-  categoryName?: string;
-  supplierId: number;
-  supplierName?: string;
-  costPrice: number;
-  sellingPrice: number;
-  reorderLevel: number;
+  categoryName: string;
+  description?: string;
   isActive: boolean;
   createdDate: string;
 }
 
-export interface ItemCreateDto {
-  itemCode: string;
-  barcode?: string;
-  itemName: string;
-  brand?: string;
-  imageUrl?: string;
-  categoryId: number;
-  supplierId: number;
-  costPrice: number;
-  sellingPrice: number;
-  reorderLevel: number;
+export interface CategoryCreateDto {
+  categoryName: string;
+  description?: string;
   isActive: boolean;
 }
 
-export interface ItemUpdateDto extends ItemCreateDto {}
+export interface CategoryUpdateDto extends CategoryCreateDto {}
 
-export const itemService = {
-  getAll: async (): Promise<ItemDto[]> => {
-    const res = await apiClient.get('/item');
+export const categoryService = {
+  getAll: async (): Promise<CategoryDto[]> => {
+    const res = await apiClient.get('/category');
     return res.data?.data ?? res.data;
   },
-  create: async (dto: ItemCreateDto): Promise<ItemDto> => {
-    const res = await apiClient.post('/item', dto);
+  create: async (dto: CategoryCreateDto): Promise<CategoryDto> => {
+    const res = await apiClient.post('/category', dto);
     return res.data?.data ?? res.data;
   },
-  update: async (id: number, dto: ItemUpdateDto): Promise<ItemDto> => {
-    const res = await apiClient.put(`/item/${id}`, dto);
+  update: async (id: number, dto: CategoryUpdateDto): Promise<CategoryDto> => {
+    const res = await apiClient.put(`/category/${id}`, dto);
     return res.data?.data ?? res.data;
   },
   delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/item/${id}`);
+    await apiClient.delete(`/category/${id}`);
   },
 };
