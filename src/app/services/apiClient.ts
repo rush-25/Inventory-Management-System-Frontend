@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// Set VITE_API_URL in .env to override. Defaults to http://localhost:5000
+
 export const BASE_URL = import.meta.env.VITE_API_URL
 
 const apiClient = axios.create({
