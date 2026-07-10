@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://Inventory-Management-System-back-env.eba-q5p3ktcn.eu-north-1.elasticbeanstalk.com:path*"
+      "destination": "http://Inventory-Management-System-back-env.eba-q5p3ktcn.eu-north-1.elasticbeanstalk.com/:path*"
     },
     {
       "source": "/(.*)",
