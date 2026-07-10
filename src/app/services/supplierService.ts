@@ -22,18 +22,18 @@ export interface SupplierUpdateDto extends SupplierCreateDto {}
 
 export const supplierService = {
   getAll: async (): Promise<SupplierDto[]> => {
-    const res = await apiClient.get('/api/supplier');
+    const res = await apiClient.get('/supplier');
     return res.data?.data ?? res.data;
   },
   create: async (dto: SupplierCreateDto): Promise<SupplierDto> => {
-    const res = await apiClient.post('/api/supplier', dto);
+    const res = await apiClient.post('/supplier', dto);
     return res.data?.data ?? res.data;
   },
   update: async (id: number, dto: SupplierUpdateDto): Promise<SupplierDto> => {
-    const res = await apiClient.put(`/api/supplier/${id}`, dto);
+    const res = await apiClient.put(`/supplier/${id}`, dto);
     return res.data?.data ?? res.data;
   },
   delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/api/supplier/${id}`);
+    await apiClient.delete(`/supplier/${id}`);
   },
 };

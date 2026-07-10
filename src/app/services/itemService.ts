@@ -36,18 +36,18 @@ export interface ItemUpdateDto extends ItemCreateDto {}
 
 export const itemService = {
   getAll: async (): Promise<ItemDto[]> => {
-    const res = await apiClient.get('/api/item');
+    const res = await apiClient.get('/item');
     return res.data?.data ?? res.data;
   },
   create: async (dto: ItemCreateDto): Promise<ItemDto> => {
-    const res = await apiClient.post('/api/item', dto);
+    const res = await apiClient.post('/item', dto);
     return res.data?.data ?? res.data;
   },
   update: async (id: number, dto: ItemUpdateDto): Promise<ItemDto> => {
-    const res = await apiClient.put(`/api/item/${id}`, dto);
+    const res = await apiClient.put(`/item/${id}`, dto);
     return res.data?.data ?? res.data;
   },
   delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/api/item/${id}`);
+    await apiClient.delete(`/item/${id}`);
   },
 };

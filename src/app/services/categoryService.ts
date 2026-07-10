@@ -1,36 +1,53 @@
 import apiClient from './apiClient';
 
-// Backend DTO shapes
-export interface CategoryDto {
+export interface ItemDto {
+  itemId: number;
+  itemCode: string;
+  barcode?: string;
+  itemName: string;
+  brand?: string;
+  imageUrl?: string;
   categoryId: number;
-  categoryName: string;
-  description?: string;
+  categoryName?: string;
+  supplierId: number;
+  supplierName?: string;
+  costPrice: number;
+  sellingPrice: number;
+  reorderLevel: number;
   isActive: boolean;
   createdDate: string;
 }
 
-export interface CategoryCreateDto {
-  categoryName: string;
-  description?: string;
+export interface ItemCreateDto {
+  itemCode: string;
+  barcode?: string;
+  itemName: string;
+  brand?: string;
+  imageUrl?: string;
+  categoryId: number;
+  supplierId: number;
+  costPrice: number;
+  sellingPrice: number;
+  reorderLevel: number;
   isActive: boolean;
 }
 
-export interface CategoryUpdateDto extends CategoryCreateDto {}
+export interface ItemUpdateDto extends ItemCreateDto {}
 
-export const categoryService = {
-  getAll: async (): Promise<CategoryDto[]> => {
-    const res = await apiClient.get('/api/category');
+export const itemService = {
+  getAll: async (): Promise<ItemDto[]> => {
+    const res = await apiClient.get('/item');
     return res.data?.data ?? res.data;
   },
-  create: async (dto: CategoryCreateDto): Promise<CategoryDto> => {
-    const res = await apiClient.post('/api/category', dto);
+  create: async (dto: ItemCreateDto): Promise<ItemDto> => {
+    const res = await apiClient.post('/item', dto);
     return res.data?.data ?? res.data;
   },
-  update: async (id: number, dto: CategoryUpdateDto): Promise<CategoryDto> => {
-    const res = await apiClient.put(`/api/category/${id}`, dto);
+  update: async (id: number, dto: ItemUpdateDto): Promise<ItemDto> => {
+    const res = await apiClient.put(`/item/${id}`, dto);
     return res.data?.data ?? res.data;
   },
   delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/api/category/${id}`);
+    await apiClient.delete(`/item/${id}`);
   },
 };
