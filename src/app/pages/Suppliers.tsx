@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 
 const supplierSchema = z.object({
   name: z.string().min(2, 'Name is required'),
-  contactNumber: z.string().min(5, 'Contact number is required'),
+  contactNumber: z.string().regex(/^\+?[\d\s-]{10,}$/, 'Valid contact number is required (min 10 digits)'),
   email: z.string().email('Valid email is required'),
   address: z.string().min(5, 'Address is required'),
   status: z.enum(['Active', 'Inactive'])
