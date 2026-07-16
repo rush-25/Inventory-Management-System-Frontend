@@ -141,7 +141,7 @@ export function StockIn() {
                 <div className="text-right">
                   <p className="text-sm font-medium text-blue-900">After Stock In</p>
                   <p className="text-2xl font-bold text-emerald-600">
-                    {selectedProduct.stockQuantity + (watch('quantity') || 0)}
+                    {selectedProduct.stockQuantity + (Number(watch('quantity')) || 0)}
                   </p>
                 </div>
               </div>
