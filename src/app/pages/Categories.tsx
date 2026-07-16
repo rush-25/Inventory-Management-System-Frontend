@@ -24,6 +24,7 @@ export function Categories() {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors }, reset, setValue } = useReactHookForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
@@ -64,14 +65,19 @@ export function Categories() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this category?')) {
+  const handleDeleteClick = (id: string) => {
+    setDeleteCategoryId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteCategoryId) {
       try {
-        await deleteCategory(id);
+        await deleteCategory(deleteCategoryId);
         toast.success('Category deleted successfully');
       } catch (err: any) {
         toast.error(err?.message ?? 'Failed to delete category');
       }
+      setDeleteCategoryId(null);
     }
   };
 
@@ -117,9 +123,9 @@ export function Categories() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredCategories.map((category, idx) => (
+                {filteredCategories.map((category) => (
                   <tr key={category.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">CAT-{String(idx + 1).padStart(3, '0')}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">CAT-{String(category.id).padStart(3, '0')}</td>
                     <td className="px-6 py-4 font-medium text-slate-900">{category.name}</td>
                     <td className="px-6 py-4 max-w-xs truncate">{category.description}</td>
                     <td className="px-6 py-4">
@@ -134,7 +140,7 @@ export function Categories() {
                       <button onClick={() => openEditModal(category)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                         <Edit2 className="h-4 w-4" />
                       </button>
-                      <button onClick={() => handleDelete(category.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                      <button onClick={() => handleDeleteClick(category.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </td>
@@ -191,6 +197,22 @@ export function Categories() {
             <Button type="submit">Save Category</Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={!!deleteCategoryId}
+        onClose={() => setDeleteCategoryId(null)}
+        title="Confirm Delete"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you sure you want to delete this category? This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+            <Button type="button" variant="ghost" onClick={() => setDeleteCategoryId(null)}>Cancel</Button>
+            <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
