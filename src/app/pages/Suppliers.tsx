@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 
 const supplierSchema = z.object({
   name: z.string().min(2, 'Name is required'),
-  contactNumber: z.string().regex(/^\+?[\d\s-]{10,}$/, 'Valid contact number is required (min 10 digits)'),
+  contactNumber: z.string().regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
   email: z.string().email('Valid email is required'),
   address: z.string().min(5, 'Address is required'),
   status: z.enum(['Active', 'Inactive'])
@@ -169,7 +169,20 @@ export function Suppliers() {
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input label="Supplier Name" {...register('name')} error={errors.name?.message} />
-          <Input label="Phone Number" {...register('contactNumber')} error={errors.contactNumber?.message} />
+          <Input
+            label="Phone Number"
+            type="tel"
+            maxLength={10}
+            inputMode="numeric"
+            placeholder="0771234567"
+            onKeyDown={(e) => {
+              if (!/[0-9]/.test(e.key) && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab'].includes(e.key)) {
+                e.preventDefault();
+              }
+            }}
+            {...register('contactNumber')}
+            error={errors.contactNumber?.message}
+          />
           <Input type="email" label="Email Address" {...register('email')} error={errors.email?.message} />
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700">Address</label>
