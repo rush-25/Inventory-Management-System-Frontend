@@ -25,6 +25,7 @@ export function Suppliers() {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [deleteSupplierId, setDeleteSupplierId] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors }, reset, setValue } = useReactHookForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
@@ -67,14 +68,19 @@ export function Suppliers() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this supplier?')) {
+  const handleDeleteClick = (id: string) => {
+    setDeleteSupplierId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteSupplierId) {
       try {
-        await deleteSupplier(id);
+        await deleteSupplier(deleteSupplierId);
         toast.success('Supplier deleted successfully');
       } catch (err: any) {
         toast.error(err?.message ?? 'Failed to delete supplier');
       }
+      setDeleteSupplierId(null);
     }
   };
 
@@ -137,7 +143,7 @@ export function Suppliers() {
                       <button onClick={() => openEditModal(supplier)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                         <Edit2 className="h-4 w-4" />
                       </button>
-                      <button onClick={() => handleDelete(supplier.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                      <button onClick={() => handleDeleteClick(supplier.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </td>
@@ -184,6 +190,22 @@ export function Suppliers() {
             <Button type="submit">Save Supplier</Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={!!deleteSupplierId}
+        onClose={() => setDeleteSupplierId(null)}
+        title="Confirm Delete"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you sure you want to delete this supplier? This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+            <Button type="button" variant="ghost" onClick={() => setDeleteSupplierId(null)}>Cancel</Button>
+            <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

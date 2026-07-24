@@ -33,6 +33,7 @@ export function Products() {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors }, reset, setValue } = useReactHookForm<ProductFormData>({
     resolver: zodResolver(productSchema) as any,
@@ -86,14 +87,19 @@ export function Products() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this product?')) {
+  const handleDeleteClick = (id: string) => {
+    setDeleteProductId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteProductId) {
       try {
-        await deleteProduct(id);
+        await deleteProduct(deleteProductId);
         toast.success('Product deleted successfully');
       } catch (err: any) {
         toast.error(err?.message ?? 'Failed to delete product');
       }
+      setDeleteProductId(null);
     }
   };
 
@@ -182,7 +188,7 @@ export function Products() {
                       <button onClick={() => openEditModal(product)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                         <Edit2 className="h-4 w-4" />
                       </button>
-                      <button onClick={() => handleDelete(product.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                      <button onClick={() => handleDeleteClick(product.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </td>
@@ -255,6 +261,22 @@ export function Products() {
             <Button type="submit">Save Product</Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={!!deleteProductId}
+        onClose={() => setDeleteProductId(null)}
+        title="Confirm Delete"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Are you sure you want to delete this product? This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+            <Button type="button" variant="ghost" onClick={() => setDeleteProductId(null)}>Cancel</Button>
+            <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Delete</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
